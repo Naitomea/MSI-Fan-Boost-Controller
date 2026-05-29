@@ -16,6 +16,10 @@ def root_path() -> Path:
 
 def assets_path() -> Path:
     return root_path() / "assets"
+    
+
+def libs_path() -> Path:
+    return root_path() / "libs"
 
 
 def is_running_as_admin() -> bool:
@@ -39,3 +43,6 @@ def relaunch_as_admin() -> None:
         None,
         1,
     )
+
+def remove_whitespaces(text: str) -> str:
+    return "".join(text.split())

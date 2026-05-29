@@ -5,8 +5,10 @@ from typing import Optional
 
 import clr
 
+from utility.utils import libs_path
 
-_DLL_PATH = Path(__file__).resolve().with_name("OpenHardwareMonitorLib.dll")
+
+_DLL_PATH = libs_path() / "OpenHardwareMonitorLib.dll"
 clr.AddReference(str(_DLL_PATH))
 
 from OpenHardwareMonitor.Hardware import Computer

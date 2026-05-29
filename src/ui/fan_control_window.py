@@ -3,11 +3,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import customtkinter as ctk
-from PIL import Image, ImageDraw
 import pystray
 
+from PIL import Image
+
 if TYPE_CHECKING:
-    from app_controller import AppController
+    from controllers.app_controller import AppController
 
 from config import (
     APP_NAME,
@@ -18,7 +19,7 @@ from config import (
     DEFAULT_GPU_LOW_TEMP_THRESHOLD,
 )
 
-from utils import assets_path
+from utility.utils import assets_path
 
 
 class FanControlWindow(ctk.CTk):

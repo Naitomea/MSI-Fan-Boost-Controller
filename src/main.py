@@ -2,10 +2,10 @@ import customtkinter as ctk
 
 from config import APPEARANCE_MODE, COLOR_THEME
 
-from app_controller import AppController
-from fan_control_window import FanControlWindow
+from controllers.app_controller import AppController
+from ui.fan_control_window import FanControlWindow
 
-from utils import *
+from utility.utils import *
 
 def main() -> None:
     if is_bundled() and not is_running_as_admin():

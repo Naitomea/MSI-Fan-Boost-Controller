@@ -3,9 +3,9 @@ from __future__ import annotations
 import threading
 from typing import Optional
 
-from fan_control_window import FanControlWindow
-from temperature import get_gpu_temp
-from yamdcc_client import YAMDCCClient, YAMDCCError
+from ui.fan_control_window import FanControlWindow
+from core.yamdcc_client import YAMDCCClient, YAMDCCError
+from core.temperature import get_gpu_temp
 
 
 class AppController:
