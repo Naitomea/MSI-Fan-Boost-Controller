@@ -24,6 +24,7 @@ from utility.utils import remove_whitespaces
 
 app_file = SRC_PATH / "main.py"
 app_icon_path = ASSETS_PATH / "icons" / "icon.ico"
+app_splash_path = ASSETS_PATH / "splash" / "splash.png"
 build_name = f"{remove_whitespaces(APP_NAME)}_{APP_VERSION.to_str("_")}"
 
 PyInstaller.__main__.run([
@@ -35,6 +36,8 @@ PyInstaller.__main__.run([
     build_name,
     "--icon",
     str(app_icon_path),
+    "--splash",
+    str(app_splash_path),
     "--distpath",
     str(DIST_PATH),
     "--workpath",
