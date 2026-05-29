@@ -2,7 +2,7 @@ from version import Version, BuildType
 
 
 APP_NAME = "MSI Fan Boost Controller"
-APP_VERSION = Version(0, 2, 0, BuildType.BETA, 1)
+APP_VERSION = Version(0, 4, 0, BuildType.BETA, 1)
 
 WINDOW_WIDTH = 750
 WINDOW_HEIGHT = 500

@@ -1,9 +1,13 @@
-# app_ui.py
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
 import customtkinter as ctk
+from PIL import Image, ImageDraw
+import pystray
+
+if TYPE_CHECKING:
+    from app_controller import AppController
 
 from config import (
     APP_NAME,
@@ -14,16 +18,13 @@ from config import (
     DEFAULT_GPU_LOW_TEMP_THRESHOLD,
 )
 
-if TYPE_CHECKING:
-    from app_controller import AppController
+from utils import assets_path
 
 
 class FanControlWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        # The controller is assigned from main.py after the UI is created.
-        # Button callbacks below delegate to it when available.
         self.controller: AppController = None
 
         # Set window properties
@@ -34,6 +35,15 @@ class FanControlWindow(ctk.CTk):
         self._set_window_title()
         self._set_window_icon()
 
+        # App State
+        self.is_quitting = False
+
+        # System Tray
+        self.tray_icon = None
+        self.is_hidden_to_tray = False
+        self._hide_to_tray_after_id = None
+
+        # Settings
         self.gpu_temp_var = ctk.StringVar(value="-- °C")
         self.service_status_var = ctk.StringVar(value="Disconnected")
         self.full_blast_status_var = ctk.StringVar(value="Unknown")
@@ -42,8 +52,16 @@ class FanControlWindow(ctk.CTk):
         self.temp_on_var = ctk.StringVar(value=str(DEFAULT_GPU_HIGH_TEMP_THRESHOLD))
         self.temp_off_var = ctk.StringVar(value=str(DEFAULT_GPU_LOW_TEMP_THRESHOLD))
 
+        # Build
         self._configure_grid()
         self._build_ui()
+
+        self._create_tray_icon()
+
+        # Binding
+        self.bind("<Unmap>", self._on_window_unmap)
+        self.bind("<Destroy>", self._on_destroy, add=True)
+        self.protocol("WM_DELETE_WINDOW", self.quit_app)
 
     # -------------------------------------------------------------------------
     # UI BUILD
@@ -133,8 +151,8 @@ class FanControlWindow(ctk.CTk):
             full_blast_actions,
             text="OFF",
             width=1,
-            fg_color=("gray75", "gray30"),
-            hover_color=("gray65", "gray40"),
+            fg_color=("gray65", "gray30"),
+            hover_color=("gray55", "gray40"),
             command=self.on_full_blast_off_clicked,
         )
         btn_off.grid(row=0, column=1, sticky=ctk.NSEW, padx=(1, 0))
@@ -262,22 +280,143 @@ class FanControlWindow(ctk.CTk):
         self.title(f"{APP_NAME} ({APP_VERSION})")
 
     def _set_window_icon(self) -> None:
-        # appearance_mode = ctk.AppearanceModeTracker.get_mode()
+        icon_path = assets_path() / "icons" / "icon.ico"
+        self.iconbitmap(icon_path, default=icon_path)
+
+    def _create_tray_icon(self) -> None:
+        image = Image.open(assets_path() / "icons" / "icon.ico")
+
+        menu = pystray.Menu(
+            pystray.MenuItem("Show", self._on_tray_show_window, default=True),
+            pystray.MenuItem("Full Blast ON", self._on_tray_full_blast_on),
+            pystray.MenuItem("Full Blast OFF", self._on_tray_full_blast_off),
+            pystray.MenuItem("Quit", self._on_tray_quit),
+        )
+
+        self.tray_icon = pystray.Icon(
+            "MSIFanController",
+            image,
+            APP_NAME,
+            menu,
+        )
         
-        # light_icon_path = FreakyPath.assets_path() / "icons" / "icon_light.ico"
-        # dark_icon_path = FreakyPath.assets_path() / "icons" / "icon_dark.ico"
+        self.tray_icon.run_detached(setup=self._setup_tray_icon)
 
-        # icon_path = (
-        #     light_icon_path
-        #     if appearance_mode == 0 else
-        #     dark_icon_path
-        # )
-
-        # self.iconbitmap(icon_path, default=icon_path)
-        pass
+    def _setup_tray_icon(self, icon) -> None:
+        icon.visible = False
 
     # -------------------------------------------------------------------------
-    # PUBLIC METHODS TO CALL FROM YOUR BACKEND
+    # EVENT CALLBACKS
+    # -------------------------------------------------------------------------
+
+    def _on_window_unmap(self, event=None) -> None:
+        """
+        Called when the window is minimized.
+        If the state is 'iconic', hide to system tray.
+        """
+
+        if self.is_quitting:
+            return
+
+        # Only react to main window, not on children widgets
+        if event is not None and event.widget is not self:
+            return
+
+        if self.is_hidden_to_tray or self.state() != "iconic":
+            return
+        
+        # Prevent multiple hide_to_tray calls
+        if self._hide_to_tray_after_id is not None:
+            return
+
+        self._hide_to_tray_after_id = self.after(100, self._hide_to_tray_from_minimize)
+
+    def _on_tray_show_window(self, icon=None, item=None) -> None:
+        self.after(0, self.show_from_tray)
+
+    def _on_tray_full_blast_on(self, icon=None, item=None) -> None:
+        self.after(0, self.on_full_blast_on_clicked)
+
+    def _on_tray_full_blast_off(self, icon=None, item=None) -> None:
+        self.after(0, self.on_full_blast_off_clicked)
+
+    def _on_tray_quit(self, icon=None, item=None) -> None:
+        self.after(0, self.quit_app)
+
+    def _on_destroy(self, event=None) -> None:
+        if event is not None and event.widget is not self:
+            return
+
+        self._clear_tray_icon()
+
+    def _clear_tray_icon(self) -> None:
+        if self.tray_icon is not None:
+            try:
+                self.tray_icon.visible = False
+                self.tray_icon.stop()
+            except Exception:
+                pass
+
+            self.tray_icon = None
+
+    # -------------------------------------------------------------------------
+    # SYSTEM TRAY INTERACTION METHODS
+    # -------------------------------------------------------------------------
+
+    def _hide_to_tray_from_minimize(self) -> None:
+        self._hide_to_tray_after_id = None
+
+        if self.is_quitting or self.is_hidden_to_tray:
+            return
+
+        if self.state() == "iconic":
+            self.hide_to_tray()
+
+    def hide_to_tray(self) -> None:
+        if self.is_quitting or self.is_hidden_to_tray:
+            return
+
+        if self.tray_icon is not None:
+            self.tray_icon.visible = True
+
+        self.is_hidden_to_tray = True
+        self.withdraw()
+
+        self.append_log("Application minimized to system tray.")
+
+    def show_from_tray(self) -> None:
+        self.is_hidden_to_tray = False
+
+        self.deiconify()
+        self.lift()
+        self.focus_force()
+
+        if self.tray_icon is not None:
+            self.tray_icon.visible = False
+
+        self.append_log("Application restored from tray.")
+
+    def quit_app(self) -> None:
+        if self.is_quitting:
+            return
+        
+        self.is_quitting = True
+
+        if self._hide_to_tray_after_id is not None:
+            try:
+                self.after_cancel(self._hide_to_tray_after_id)
+            except Exception:
+                pass
+
+            self._hide_to_tray_after_id = None
+
+        self._clear_tray_icon()
+
+        self.quit()
+        self.destroy()
+
+    # -------------------------------------------------------------------------
+    # PUBLIC METHODS TO CALL FROM BACKEND
     # -------------------------------------------------------------------------
 
     def set_gpu_temperature(self, temperature: float | int | None) -> None:
@@ -311,8 +450,7 @@ class FanControlWindow(ctk.CTk):
         self.log_box.configure(state="disabled")
 
     # -------------------------------------------------------------------------
-    # CALLBACKS PLACEHOLDERS
-    # Replace these methods or bind them to your backend.
+    # CALLBACKS
     # -------------------------------------------------------------------------
 
     def on_full_blast_on_clicked(self) -> None:
@@ -362,15 +500,3 @@ class FanControlWindow(ctk.CTk):
 
         except ValueError:
             self.append_log("Error: invalid temperature threshold.")
-
-
-# if __name__ == "__main__":
-#     app = MainWindow()
-
-#     # Demo values. Tu pourras supprimer ces lignes.
-#     app.set_gpu_temperature(74)
-#     app.set_yamdcc_connected(True)
-#     app.set_full_blast_state(False)
-#     app.append_log("Application started.")
-
-#     app.mainloop()
