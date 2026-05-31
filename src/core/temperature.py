@@ -5,7 +5,7 @@ from typing import Optional
 
 import clr
 
-from utility.utils import libs_path
+from utility.path import libs_path
 
 
 _DLL_PATH = libs_path() / "OpenHardwareMonitorLib.dll"

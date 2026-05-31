@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from subprocess import CalledProcessError
 import threading
 from typing import Optional
 
 from ui.fan_control_window import FanControlWindow
 from core.yamdcc_client import YAMDCCClient, YAMDCCError
 from core.temperature import get_gpu_temp
+
+from utility.os.windows import is_startup_enabled, enable_startup, disable_startup
 
 
 class AppController:
@@ -54,6 +57,16 @@ class AppController:
     # UI callback targets
     # ------------------------------------------------------------------
 
+    def on_startup_changed(self) -> None:
+        enabled = self.window.get_startup_enabled()
+
+        try:
+            self.set_startup_mode(enabled)
+            self.window.append_log(f"Launch at startup {'enabled' if enabled else 'disabled'}.")
+        except CalledProcessError as e:
+            self.window.append_log(f"An error occured when trying to change startup mode: {e}.")
+
+
     def request_full_blast_on(self) -> None:
         self._run_fan_command("on", lambda: self.yamdcc.enable_full_blast())
 
@@ -85,6 +98,16 @@ class AppController:
         self.window.append_log(
             f"Thresholds applied. ON={high_temp:.0f}°C / OFF={low_temp:.0f}°C"
         )
+
+    # ------------------------------------------------------------------
+    # App methods
+    # ------------------------------------------------------------------
+
+    def set_startup_mode(self, enabled: bool) -> None:
+        if enabled and not is_startup_enabled():
+            enable_startup()
+        elif not enabled and is_startup_enabled():
+            disable_startup()
 
     # ------------------------------------------------------------------
     # Background tasks

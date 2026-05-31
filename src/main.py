@@ -6,21 +6,8 @@ from controllers.app_controller import AppController
 from ui.fan_control_window import FanControlWindow
 
 from utility.utils import *
-
-
-def close_splash(app: ctk.CTk) -> None:
-    try:
-        import pyi_splash
-
-        if pyi_splash.is_alive():
-            pyi_splash.close()
-
-        app.lift()
-        app.focus_force()
-    except ImportError:
-        pass
-    except Exception:
-        pass
+from utility.os.windows import *
+from utility.splash import *
 
 
 def main() -> None:

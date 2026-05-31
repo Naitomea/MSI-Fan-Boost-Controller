@@ -19,7 +19,7 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from config import APP_NAME, APP_VERSION
-from utility.utils import remove_whitespaces
+from utility.string import remove_whitespaces
 
 
 app_file = SRC_PATH / "main.py"

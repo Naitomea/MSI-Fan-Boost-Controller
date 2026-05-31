@@ -7,9 +7,6 @@ import pystray
 
 from PIL import Image
 
-if TYPE_CHECKING:
-    from controllers.app_controller import AppController
-
 from config import (
     APP_NAME,
     APP_VERSION,
@@ -19,7 +16,11 @@ from config import (
     DEFAULT_GPU_LOW_TEMP_THRESHOLD,
 )
 
-from utility.utils import assets_path
+from utility.path import assets_path
+from utility.os.windows import is_startup_enabled
+
+if TYPE_CHECKING:
+    from controllers.app_controller import AppController
 
 
 class FanControlWindow(ctk.CTk):
@@ -49,6 +50,7 @@ class FanControlWindow(ctk.CTk):
         self.service_status_var = ctk.StringVar(value="Disconnected")
         self.full_blast_status_var = ctk.StringVar(value="Unknown")
         self.auto_mode_var = ctk.BooleanVar(value=False)
+        self.startup_var = ctk.BooleanVar(value=is_startup_enabled())
 
         self.temp_on_var = ctk.StringVar(value=str(DEFAULT_GPU_HIGH_TEMP_THRESHOLD))
         self.temp_off_var = ctk.StringVar(value=str(DEFAULT_GPU_LOW_TEMP_THRESHOLD))
@@ -96,6 +98,23 @@ class FanControlWindow(ctk.CTk):
             text_color=("gray35", "gray70"),
         )
         subtitle.grid(row=1, column=0, sticky="w", padx=24, pady=(0, 18))
+
+        # startup
+        startup_frame = ctk.CTkFrame(header, fg_color="transparent")
+        startup_frame.grid_columnconfigure(0, weight=1)
+        startup_frame.place(anchor=ctk.NE, relx=1.0, x=38, y=34)
+
+        startup_label = ctk.CTkLabel(startup_frame, text="Launch at startup")
+        startup_label.grid(row=0, column=0, padx=(0, 8))
+
+        startup_switch = ctk.CTkSwitch(
+            startup_frame,
+            text="",
+            variable=self.startup_var,
+            command=self._on_startup_changed,
+        )
+        startup_switch.grid(row=0, column=1)
+        startup_switch._text_label.grid_remove()
 
     def _build_status_cards(self) -> None:
         cards = ctk.CTkFrame(self, fg_color="transparent")
@@ -420,6 +439,9 @@ class FanControlWindow(ctk.CTk):
     # PUBLIC METHODS TO CALL FROM BACKEND
     # -------------------------------------------------------------------------
 
+    def get_startup_enabled(self) -> bool:
+        return self.startup_var.get()
+
     def set_gpu_temperature(self, temperature: float | int | None) -> None:
         if temperature is None:
             self.gpu_temp_var.set("-- °C")
@@ -453,6 +475,13 @@ class FanControlWindow(ctk.CTk):
     # -------------------------------------------------------------------------
     # CALLBACKS
     # -------------------------------------------------------------------------
+    
+    def _on_startup_changed(self) -> None:
+        if self.controller:
+            self.controller.on_startup_changed()
+        else:
+            enabled = self.startup_var.get()
+            self.append_log(f"UI: launch at startup {'enabled' if enabled else 'disabled'}.")
 
     def on_full_blast_on_clicked(self) -> None:
         if self.controller:
