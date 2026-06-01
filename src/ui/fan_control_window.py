@@ -17,6 +17,7 @@ from config import (
 )
 
 from utility.path import assets_path
+from utility.string import remove_whitespaces
 from utility.os.windows import is_startup_enabled
 
 if TYPE_CHECKING:
@@ -308,13 +309,37 @@ class FanControlWindow(ctk.CTk):
 
         menu = pystray.Menu(
             pystray.MenuItem("Show", self._on_tray_show_window, default=True),
-            pystray.MenuItem("Full Blast ON", self._on_tray_full_blast_on),
-            pystray.MenuItem("Full Blast OFF", self._on_tray_full_blast_off),
+
+            pystray.Menu.SEPARATOR,
+
+            pystray.MenuItem(
+                "Full Blast",
+                pystray.Menu(
+                    pystray.MenuItem("ON", self._on_tray_full_blast_on),
+                    pystray.MenuItem("OFF", self._on_tray_full_blast_off),
+                ),
+            ),
+
+            pystray.Menu.SEPARATOR,
+
+            pystray.MenuItem(
+                "Launch at Startup", 
+                self._on_tray_toggle_startup,
+                checked=lambda _: self.get_startup_enabled(),
+            ),
+            pystray.MenuItem(
+                "Auto Mode", 
+                self._on_tray_toggle_auto_mode,
+                checked=lambda _: self.get_auto_mode_enabled(),
+            ),
+
+            pystray.Menu.SEPARATOR,
+
             pystray.MenuItem("Quit", self._on_tray_quit),
         )
 
         self.tray_icon = pystray.Icon(
-            "MSIFanController",
+            remove_whitespaces(APP_NAME),
             image,
             APP_NAME,
             menu,
@@ -359,6 +384,12 @@ class FanControlWindow(ctk.CTk):
 
     def _on_tray_full_blast_off(self, icon=None, item=None) -> None:
         self.after(0, self.on_full_blast_off_clicked)
+
+    def _on_tray_toggle_startup(self, icon=None, item=None) -> None:
+        self.after(0, self.toggle_startup)
+    
+    def _on_tray_toggle_auto_mode(self, icon=None, item=None) -> None:
+        self.after(0, self.toggle_auto_mode)
 
     def _on_tray_quit(self, icon=None, item=None) -> None:
         self.after(0, self.quit_app)
@@ -456,6 +487,10 @@ class FanControlWindow(ctk.CTk):
 
     def get_startup_enabled(self) -> bool:
         return self.startup_var.get()
+    
+    def toggle_startup(self) -> None:
+        self.startup_var.set(not self.get_startup_enabled())
+        self._on_startup_changed()
 
     def set_gpu_temperature(self, temperature: float | int | None) -> None:
         if temperature is None:
@@ -475,6 +510,10 @@ class FanControlWindow(ctk.CTk):
 
     def get_auto_mode_enabled(self) -> bool:
         return self.auto_mode_var.get()
+    
+    def toggle_auto_mode(self) -> None:
+        self.auto_mode_var.set(not self.get_auto_mode_enabled())
+        self.on_auto_mode_changed()
 
     def get_thresholds(self) -> tuple[float, float]:
         temp_on = float(self.temp_on_var.get().replace(",", "."))
