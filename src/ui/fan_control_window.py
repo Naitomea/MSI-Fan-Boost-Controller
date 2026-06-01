@@ -47,7 +47,7 @@ class FanControlWindow(ctk.CTk):
         self._hide_to_tray_after_id = None
 
         # Settings
-        self.gpu_temp_var = ctk.StringVar(value="-- °C")
+        self.gpu_temp_var = ctk.StringVar(value="--°C")
         self.service_status_var = ctk.StringVar(value="Disconnected")
         self.full_blast_status_var = ctk.StringVar(value="Unknown")
         self.auto_mode_var = ctk.BooleanVar(value=False)
@@ -494,10 +494,10 @@ class FanControlWindow(ctk.CTk):
 
     def set_gpu_temperature(self, temperature: float | int | None) -> None:
         if temperature is None:
-            self.gpu_temp_var.set("-- °C")
+            self.gpu_temp_var.set("--°C")
             return
 
-        self.gpu_temp_var.set(f"{temperature:.0f} °C")
+        self.gpu_temp_var.set(f"{temperature:.0f}°C")
 
     def set_yamdcc_connected(self, connected: bool) -> None:
         self.service_status_var.set("Connected" if connected else "Disconnected")
