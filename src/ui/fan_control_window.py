@@ -341,7 +341,7 @@ class FanControlWindow(ctk.CTk):
         self.tray_icon = pystray.Icon(
             remove_whitespaces(APP_NAME),
             image,
-            APP_NAME,
+            self._get_tray_title(),
             menu,
         )
         
@@ -349,6 +349,19 @@ class FanControlWindow(ctk.CTk):
 
     def _setup_tray_icon(self, icon) -> None:
         icon.visible = False
+
+    def _get_tray_title(self) -> str:
+        if self.gpu_temp_var.get().startswith("--"):
+            return APP_NAME
+        
+        return f"{APP_NAME} - {self.gpu_temp_var.get()}"
+    
+    def _update_tray_title(self) -> None:
+        if self.tray_icon is None:
+            return
+
+        try: self.tray_icon.title = self._get_tray_title()
+        except Exception: pass
 
     # -------------------------------------------------------------------------
     # EVENT CALLBACKS
@@ -493,11 +506,13 @@ class FanControlWindow(ctk.CTk):
         self._on_startup_changed()
 
     def set_gpu_temperature(self, temperature: float | int | None) -> None:
-        if temperature is None:
-            self.gpu_temp_var.set("--°C")
-            return
-
-        self.gpu_temp_var.set(f"{temperature:.0f}°C")
+        self.gpu_temp_var.set(
+            f"{temperature:.0f}°C"
+            if temperature is not None else
+            "--°C"
+        )
+        
+        self._update_tray_title()
 
     def set_yamdcc_connected(self, connected: bool) -> None:
         self.service_status_var.set("Connected" if connected else "Disconnected")
