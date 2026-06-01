@@ -59,13 +59,7 @@ class AppController:
 
     def on_startup_changed(self) -> None:
         enabled = self.window.get_startup_enabled()
-
-        try:
-            self.set_startup_mode(enabled)
-            self.window.append_log(f"Launch at startup {'enabled' if enabled else 'disabled'}.")
-        except CalledProcessError as e:
-            self.window.append_log(f"An error occured when trying to change startup mode: {e}.")
-
+        self.set_startup_mode(enabled)
 
     def request_full_blast_on(self) -> None:
         self._run_fan_command("on", lambda: self.yamdcc.enable_full_blast())
@@ -104,10 +98,15 @@ class AppController:
     # ------------------------------------------------------------------
 
     def set_startup_mode(self, enabled: bool) -> None:
-        if enabled and not is_startup_enabled():
-            enable_startup()
-        elif not enabled and is_startup_enabled():
-            disable_startup()
+        try:
+            if enabled and not is_startup_enabled():
+                enable_startup("--startup")
+            elif not enabled and is_startup_enabled():
+                disable_startup()
+
+            self.window.append_log(f"Launch at startup {'enabled' if enabled else 'disabled'}.")
+        except Exception as e:
+            self.window.append_log(f"An error occured when trying to change startup mode: {e}.")
 
     # ------------------------------------------------------------------
     # Background tasks

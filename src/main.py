@@ -1,3 +1,5 @@
+import argparse
+
 import customtkinter as ctk
 
 from config import APPEARANCE_MODE, COLOR_THEME
@@ -10,10 +12,27 @@ from utility.os.windows import *
 from utility.splash import *
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--startup",
+        action="store_true",
+        help="Launch app in startup mode: hidden to tray and without splash.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
     if is_bundled() and not is_running_as_admin():
         relaunch_as_admin()
         return
+    
+    args = parse_args()
+    
+    # In case splash screen not remove,
+    # close it immediately in startup mode
+    if args.startup:
+        close_splash()
     
     ctk.set_appearance_mode(APPEARANCE_MODE)
     ctk.set_default_color_theme(COLOR_THEME)
@@ -22,7 +41,10 @@ def main() -> None:
     controller = AppController(app)
     controller.start()
 
-    app.after(300, lambda: close_splash(app))
+    if args.startup:
+        app.start_hidden_to_tray()
+    else:
+        app.after(300, lambda: close_splash(app))
 
     app.mainloop()
 

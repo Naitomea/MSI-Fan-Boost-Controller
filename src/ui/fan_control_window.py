@@ -383,6 +383,21 @@ class FanControlWindow(ctk.CTk):
     # SYSTEM TRAY INTERACTION METHODS
     # -------------------------------------------------------------------------
 
+    def start_hidden_to_tray(self) -> None:
+        """
+        Used when app is launched from Windows startup.
+        Hide the main window immediately and show the tray icon.
+        """
+
+        if self.is_quitting or self.is_hidden_to_tray:
+            return
+
+        if self.tray_icon is not None:
+            self.tray_icon.visible = True
+
+        self.is_hidden_to_tray = True
+        self.withdraw()
+
     def _hide_to_tray_from_minimize(self) -> None:
         self._hide_to_tray_after_id = None
 
