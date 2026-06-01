@@ -13,12 +13,12 @@ from config import (
 
 from controllers.app_controller import AppController
 from ui.fan_control_window import FanControlWindow
-from pref_keys import PrefKeys
 
 from utility.utils import *
 from utility.os.windows import *
 from utility.splash import *
 from utility.user_prefs import UserPrefs
+from pref_keys import PrefKeys
 
 
 def parse_args() -> argparse.Namespace:

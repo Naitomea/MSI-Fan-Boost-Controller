@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from subprocess import CalledProcessError
 import threading
 from typing import Optional
 
@@ -51,7 +50,7 @@ class AppController:
 
     def close(self) -> None:
         self._closed = True
-        self.window.destroy()
+        self.window.quit_app()
 
     # ------------------------------------------------------------------
     # UI callback targets
@@ -96,7 +95,7 @@ class AppController:
     def set_startup_mode(self, enabled: bool) -> None:
         try:
             if enabled and not is_startup_enabled():
-                enable_startup("--startup")
+                enable_startup("--startup", splash_screen=False)
             elif not enabled and is_startup_enabled():
                 disable_startup()
 

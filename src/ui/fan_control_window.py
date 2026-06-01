@@ -48,15 +48,16 @@ class FanControlWindow(ctk.CTk):
         self.tray_icon = None
         self.is_hidden_to_tray = False
         self._hide_to_tray_after_id = None
+        self._tray_icon_should_be_visible = False
 
         # Settings
+        self.startup_var = ctk.BooleanVar(value=is_startup_enabled())
         self.gpu_temp_var = ctk.StringVar(value="--°C")
         self.service_status_var = ctk.StringVar(value="Disconnected")
         self.full_blast_status_var = ctk.StringVar(value="Unknown")
         self.auto_mode_var = ctk.BooleanVar(
             value=UserPrefs.get(PrefKeys.AUTO_MODE, DEFAULT_AUTO_MODE)
         )
-        self.startup_var = ctk.BooleanVar(value=is_startup_enabled())
 
         self.temp_on_var = ctk.StringVar(
             value=str(
@@ -367,7 +368,7 @@ class FanControlWindow(ctk.CTk):
         self.tray_icon.run_detached(setup=self._setup_tray_icon)
 
     def _setup_tray_icon(self, icon) -> None:
-        icon.visible = False
+        icon.visible = self._tray_icon_should_be_visible
 
     def _get_tray_title(self) -> str:
         if self.gpu_temp_var.get().startswith("--"):
@@ -381,6 +382,17 @@ class FanControlWindow(ctk.CTk):
 
         try: self.tray_icon.title = self._get_tray_title()
         except Exception: pass
+
+    def _set_tray_icon_visible(self, visible: bool) -> None:
+        self._tray_icon_should_be_visible = visible
+
+        if self.tray_icon is None:
+            return
+
+        try:
+            self.tray_icon.visible = visible
+        except Exception:
+            pass
 
     # -------------------------------------------------------------------------
     # EVENT CALLBACKS
@@ -433,6 +445,8 @@ class FanControlWindow(ctk.CTk):
         self._clear_tray_icon()
 
     def _clear_tray_icon(self) -> None:
+        self._tray_icon_should_be_visible = False
+        
         if self.tray_icon is not None:
             try:
                 self.tray_icon.visible = False
@@ -455,8 +469,7 @@ class FanControlWindow(ctk.CTk):
         if self.is_quitting or self.is_hidden_to_tray:
             return
 
-        if self.tray_icon is not None:
-            self.tray_icon.visible = True
+        self._set_tray_icon_visible(True)
 
         self.is_hidden_to_tray = True
         self.withdraw()
@@ -474,8 +487,7 @@ class FanControlWindow(ctk.CTk):
         if self.is_quitting or self.is_hidden_to_tray:
             return
 
-        if self.tray_icon is not None:
-            self.tray_icon.visible = True
+        self._set_tray_icon_visible(True)
 
         self.is_hidden_to_tray = True
         self.withdraw()
@@ -489,8 +501,7 @@ class FanControlWindow(ctk.CTk):
         self.lift()
         self.focus_force()
 
-        if self.tray_icon is not None:
-            self.tray_icon.visible = False
+        self._set_tray_icon_visible(False)
 
         self.append_log("Application restored from tray.")
 
