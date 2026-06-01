@@ -85,10 +85,6 @@ class AppController:
             self.window.append_log("Error: invalid temperature threshold.")
             return
 
-        if low_temp >= high_temp:
-            self.window.append_log("Warning: disable threshold should be lower than enable threshold.")
-            return
-
         self.window.append_log(
             f"Thresholds applied. ON={high_temp:.0f}°C / OFF={low_temp:.0f}°C"
         )

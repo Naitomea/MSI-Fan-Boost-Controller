@@ -12,6 +12,7 @@ from config import (
     APP_VERSION,
     WINDOW_WIDTH,
     WINDOW_HEIGHT,
+    DEFAULT_AUTO_MODE,
     DEFAULT_GPU_HIGH_TEMP_THRESHOLD,
     DEFAULT_GPU_LOW_TEMP_THRESHOLD,
 )
@@ -19,6 +20,8 @@ from config import (
 from utility.path import assets_path
 from utility.string import remove_whitespaces
 from utility.os.windows import is_startup_enabled
+from utility.user_prefs import UserPrefs
+from pref_keys import PrefKeys
 
 if TYPE_CHECKING:
     from controllers.app_controller import AppController
@@ -50,11 +53,27 @@ class FanControlWindow(ctk.CTk):
         self.gpu_temp_var = ctk.StringVar(value="--°C")
         self.service_status_var = ctk.StringVar(value="Disconnected")
         self.full_blast_status_var = ctk.StringVar(value="Unknown")
-        self.auto_mode_var = ctk.BooleanVar(value=False)
+        self.auto_mode_var = ctk.BooleanVar(
+            value=UserPrefs.get(PrefKeys.AUTO_MODE, DEFAULT_AUTO_MODE)
+        )
         self.startup_var = ctk.BooleanVar(value=is_startup_enabled())
 
-        self.temp_on_var = ctk.StringVar(value=str(DEFAULT_GPU_HIGH_TEMP_THRESHOLD))
-        self.temp_off_var = ctk.StringVar(value=str(DEFAULT_GPU_LOW_TEMP_THRESHOLD))
+        self.temp_on_var = ctk.StringVar(
+            value=str(
+                UserPrefs.get(
+                    PrefKeys.GPU_HIGH_TEMP_THRESHOLD, 
+                    DEFAULT_GPU_HIGH_TEMP_THRESHOLD,
+                )
+            )
+        )
+        self.temp_off_var = ctk.StringVar(
+            value=str(
+                UserPrefs.get(
+                    PrefKeys.GPU_LOW_TEMP_THRESHOLD, 
+                    DEFAULT_GPU_LOW_TEMP_THRESHOLD,
+                )
+            )
+        )
 
         # Build
         self._configure_grid()
@@ -511,7 +530,7 @@ class FanControlWindow(ctk.CTk):
             if temperature is not None else
             "--°C"
         )
-        
+
         self._update_tray_title()
 
     def set_yamdcc_connected(self, connected: bool) -> None:
@@ -577,6 +596,8 @@ class FanControlWindow(ctk.CTk):
             self.append_log("UI: status refresh requested.")
 
     def on_auto_mode_changed(self) -> None:
+        UserPrefs.set(PrefKeys.AUTO_MODE, self.auto_mode_var.get())
+
         if self.controller:
             self.controller.on_auto_mode_changed()
         else:
@@ -584,18 +605,20 @@ class FanControlWindow(ctk.CTk):
             self.append_log(f"UI: auto mode {'enabled' if enabled else 'disabled'}.")
 
     def on_thresholds_apply_clicked(self) -> None:
-        if self.controller:
-            self.controller.on_thresholds_apply_clicked()
-            return
-
         try:
             temp_on, temp_off = self.get_thresholds()
 
             if temp_off >= temp_on:
                 self.append_log("Warning: disable threshold should be lower than enable threshold.")
                 return
+            
+            UserPrefs.set(PrefKeys.GPU_HIGH_TEMP_THRESHOLD, temp_on)
+            UserPrefs.set(PrefKeys.GPU_LOW_TEMP_THRESHOLD, temp_off)
 
-            self.append_log(f"UI: thresholds applied. ON={temp_on:.0f}°C / OFF={temp_off:.0f}°C")
+            if self.controller:
+                self.controller.on_thresholds_apply_clicked()
+            else:
+                self.append_log(f"UI: thresholds applied. ON={temp_on:.0f}°C / OFF={temp_off:.0f}°C")
 
         except ValueError:
             self.append_log("Error: invalid temperature threshold.")

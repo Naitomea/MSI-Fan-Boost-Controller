@@ -2,14 +2,23 @@ import argparse
 
 import customtkinter as ctk
 
-from config import APPEARANCE_MODE, COLOR_THEME
+from config import (
+    APPEARANCE_MODE, 
+    COLOR_THEME,
+    APP_NAME,
+    DEFAULT_AUTO_MODE,
+    DEFAULT_GPU_HIGH_TEMP_THRESHOLD,
+    DEFAULT_GPU_LOW_TEMP_THRESHOLD,
+)
 
 from controllers.app_controller import AppController
 from ui.fan_control_window import FanControlWindow
+from pref_keys import PrefKeys
 
 from utility.utils import *
 from utility.os.windows import *
 from utility.splash import *
+from utility.user_prefs import UserPrefs
 
 
 def parse_args() -> argparse.Namespace:
@@ -20,6 +29,17 @@ def parse_args() -> argparse.Namespace:
         help="Launch app in startup mode: hidden to tray and without splash.",
     )
     return parser.parse_args()
+
+
+def init_user_prefs() -> None:
+    UserPrefs.init(
+        app_name=APP_NAME,
+        defaults={
+            PrefKeys.AUTO_MODE: DEFAULT_AUTO_MODE,
+            PrefKeys.GPU_HIGH_TEMP_THRESHOLD: DEFAULT_GPU_HIGH_TEMP_THRESHOLD,
+            PrefKeys.GPU_LOW_TEMP_THRESHOLD: DEFAULT_GPU_LOW_TEMP_THRESHOLD,
+        },
+    )
 
 
 def main() -> None:
@@ -33,6 +53,8 @@ def main() -> None:
     # close it immediately in startup mode
     if args.startup:
         close_splash()
+
+    init_user_prefs()
     
     ctk.set_appearance_mode(APPEARANCE_MODE)
     ctk.set_default_color_theme(COLOR_THEME)
